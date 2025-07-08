@@ -1,8 +1,47 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "webpack": true
+  },
+  "monorepo": true,
+  "projects": {
+    "notification": {
+      "type": "application",
+      "root": "apps/notification",
+      "entryFile": "main",
+      "sourceRoot": "apps/notification/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/notification/tsconfig.app.json"
+      }
+    },
+    "person": {
+      "type": "application",
+      "root": "apps/person",
+      "entryFile": "main",
+      "sourceRoot": "apps/person/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/person/tsconfig.app.json"
+      }
+    },
+    "todo": {
+      "type": "application",
+      "root": "apps/todo",
+      "entryFile": "main",
+      "sourceRoot": "apps/todo/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/todo/tsconfig.app.json"
+      }
+    },
+    "todo-api-gateway": {
+      "type": "application",
+      "root": "apps/todo-api-gateway",
+      "entryFile": "main",
+      "sourceRoot": "apps/todo-api-gateway/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/todo-api-gateway/tsconfig.app.json"
+      }
+    }
   }
 }
