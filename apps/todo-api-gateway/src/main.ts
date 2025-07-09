@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { TodoApiGatewayModule } from './todo-api-gateway.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
@@ -13,6 +14,13 @@ async function bootstrap() {
 
   // Global prefix for all routes
   app.setGlobalPrefix('api/v1');
+
+  // Enable validation pipe
+  app.useGlobalPipes(new ValidationPipe({
+    transform: true,
+    whitelist: true,
+    forbidNonWhitelisted: true,
+  }));
 
   // Swagger configuration
   const config = new DocumentBuilder()

@@ -11,7 +11,7 @@ export interface DatabaseConfig {
   ssl: boolean | { rejectUnauthorized: boolean };
 }
 
-export const getDatabaseConfig = (serviceName: string): TypeOrmModuleOptions => {
+export const getDatabaseConfig = (serviceName: string, entities: any[]): TypeOrmModuleOptions => {
   return {
     type: 'postgres',
     host: process.env.DB_HOST || 'localhost',
@@ -19,19 +19,19 @@ export const getDatabaseConfig = (serviceName: string): TypeOrmModuleOptions => 
     username: process.env.DB_USERNAME || 'postgres',
     password: process.env.DB_PASSWORD || 'password',
     database: process.env.DB_NAME || 'tasksync_db',
-    entities: [__dirname + `/../../../../apps/${serviceName}/src/**/*.entity{.ts,.js}`],
-    synchronize: process.env.NODE_ENV !== 'production',
+    entities: entities,
+    synchronize: true,
     logging: process.env.NODE_ENV === 'development',
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    migrations: [__dirname + `/../../../../apps/${serviceName}/src/migrations/*{.ts,.js}`],
-    migrationsRun: true,
-    migrationsTableName: 'migrations',
+    // migrations: [__dirname + `/../../../../apps/${serviceName}/src/migrations/*{.ts,.js}`],
+    // migrationsRun: true,
+    // migrationsTableName: 'migrations',
   };
 };
 
 // Specific configurations for each service
-export const personServiceDatabaseConfig = (): TypeOrmModuleOptions => 
-  getDatabaseConfig('person');
+export const personServiceDatabaseConfig = (entities: any[]): TypeOrmModuleOptions => 
+  getDatabaseConfig('person', entities);
 
-export const todoServiceDatabaseConfig = (): TypeOrmModuleOptions => 
-  getDatabaseConfig('todo');
+export const todoServiceDatabaseConfig = (entities: any[]): TypeOrmModuleOptions => 
+  getDatabaseConfig('todo', entities);

@@ -27,7 +27,13 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./apps/todo-api-gateway/test/jest-e2e.json"
+    "test:e2e": "jest --config ./apps/todo-api-gateway/test/jest-e2e.json",
+    "migration:generate:person": "cd apps/person && npx typeorm migration:generate -d data-source.js",
+    "migration:run:person": "cd apps/person && npx typeorm migration:run -d data-source.js",
+    "migration:revert:person": "cd apps/person && npx typeorm migration:revert -d ormconfig.js",
+    "migration:generate:todo": "cd apps/todo && npx typeorm migration:generate -d ormconfig.js",
+    "migration:run:todo": "cd apps/todo && npx typeorm migration:run -d ormconfig.js",
+    "migration:revert:todo": "cd apps/todo && npx typeorm migration:revert -d ormconfig.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -37,6 +43,8 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.2.0",
     "@nestjs/typeorm": "^11.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
     "pg": "^8.16.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
