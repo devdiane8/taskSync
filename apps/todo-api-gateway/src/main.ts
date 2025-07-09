@@ -19,10 +19,9 @@ async function bootstrap() {
     .setTitle('TaskSync API Gateway')
     .setDescription('API Gateway for TaskSync microservices architecture')
     .setVersion('1.0')
-    .addTag('users', 'User management operations')
-    .addTag('tasks', 'Task management operations')
-    .addTag('projects', 'Project management operations')
-    .addTag('notifications', 'Notification operations')
+    .addTag('person', 'Person management operations')
+    .addTag('todo', 'Todo management operations')
+    .addTag('notification', 'Notification operations')
     .addTag('health', 'Health check operations')
     .addBearerAuth()
     .build();

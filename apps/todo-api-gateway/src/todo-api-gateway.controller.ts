@@ -5,10 +5,9 @@ import { firstValueFrom } from 'rxjs';
 @Controller()
 export class TodoApiGatewayController {
   constructor(
-    @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
-    @Inject('TASK_SERVICE') private readonly taskClient: ClientProxy,
+    @Inject('PERSON_SERVICE') private readonly personClient: ClientProxy,
+    @Inject('TODO_SERVICE') private readonly todoClient: ClientProxy,
     @Inject('NOTIFICATION_SERVICE') private readonly notificationClient: ClientProxy,
-    @Inject('PROJECT_SERVICE') private readonly projectClient: ClientProxy,
   ) {}
 
  
@@ -21,10 +20,9 @@ export class TodoApiGatewayController {
       timestamp: new Date().toISOString(),
       services: {
         gateway: 'running',
-        user: 'checking...',
-        task: 'checking...',
+        person: 'checking...',
+        todo: 'checking...',
         notification: 'checking...',
-        project: 'checking...'
       }
     };
   }

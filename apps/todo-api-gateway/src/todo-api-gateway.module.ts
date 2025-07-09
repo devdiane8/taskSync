@@ -13,7 +13,7 @@ import { NotificationModule } from './notification/notification.module';
     NotificationModule,
     ClientsModule.register([
       {
-        name: 'USER_SERVICE',
+        name: 'PERSON_SERVICE',
         transport: Transport.TCP,
         options: {
           host: 'localhost',
@@ -21,11 +21,11 @@ import { NotificationModule } from './notification/notification.module';
         },
       },
       {
-        name: 'TASK_SERVICE',
+        name: 'TODO_SERVICE',
         transport: Transport.TCP,
         options: {
           host: 'localhost',
-          port: 4002,
+          port: 4003,
         },
       },
       {
@@ -34,14 +34,6 @@ import { NotificationModule } from './notification/notification.module';
         options: {
           host: 'localhost',
           port: 4003,
-        },
-      },
-      {
-        name: 'PROJECT_SERVICE',
-        transport: Transport.TCP,
-        options: {
-          host: 'localhost',
-          port: 4004,
         },
       },
     ]),
