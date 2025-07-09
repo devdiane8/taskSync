@@ -1,79 +1,71 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
-import { Todo } from './entities/todo.entity';
-import { validate } from 'class-validator';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from '@app/shared';
+import { Prisma } from '../../../generated/prisma';
 
 @Injectable()
 export class TodoService {
-  constructor(
-    @InjectRepository(Todo)
-    private todoRepository: Repository<Todo>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  getHello(): string {
-    return 'Hello World!';
-  }
-
-  async findAll(filters?: any, page: number = 1, pageSize: number = 10): Promise<{ data: Todo[]; total: number }> {
-    const queryBuilder = this.todoRepository.createQueryBuilder('todo');
-
-    // Apply filters
-    if (filters) {
-      this.applyFilters(queryBuilder, filters);
-    }
-
-    // Apply pagination
-    const skip = (page - 1) * pageSize;
-    queryBuilder.skip(skip).take(pageSize);
-
-    // Order by creation date (newest first)
-    queryBuilder.orderBy('todo.createdAt', 'DESC');
-
-    const [data, total] = await queryBuilder.getManyAndCount();
-
-    return { data, total };
-  }
-
-  async findOne(id: number): Promise<Todo | null> {
-    return this.todoRepository.findOne({ where: { id } });
-  }
-
-  async create(todoData: Partial<Todo>): Promise<Todo> {
+  /** 📌 Ajouter une tâche */
+  async create(todoData: {
+    title: string;
+    description?: string;
+    personId: number;
+  }) {
     // Validate title length (minimum 3 characters after trim)
     if (!todoData.title || todoData.title.trim().length < 3) {
       throw new BadRequestException('Title must be at least 3 characters long');
     }
 
     // Trim the title
-    todoData.title = todoData.title.trim();
+    const normalizedData = {
+      ...todoData,
+      title: todoData.title.trim(),
+    };
 
-    // Validate personId exists (this would typically call the person service)
-    if (!todoData.personId) {
+    // Remove personId from the data you send to Prisma
+    const { personId, ...rest } = normalizedData;
+
+    // Validate personId exists
+    if (!personId) {
       throw new BadRequestException('Person ID is required');
     }
 
-    // TODO: Add REST call to person-service to verify personId exists
-    // await this.verifyPersonExists(todoData.personId);
+    // Verify person exists
+    const person = await this.prisma.person.findUnique({
+      where: { id: personId },
+    });
+    if (!person) {
+      throw new BadRequestException(`Person with ID ${personId} not found`);
+    }
 
-    const todo = this.todoRepository.create(todoData);
-    const savedTodo = await this.todoRepository.save(todo);
-
-    // TODO: Publish TASK_CREATED event to Kafka
-    // await this.eventService.publish('TASK_CREATED', savedTodo);
-
-    return savedTodo;
+    return this.prisma.todo.create({
+      data: {
+        ...rest,
+        person: { connect: { id: personId } },
+      },
+      include: {
+        person: true,
+      },
+    });
   }
 
-  async update(id: number, todoData: Partial<Todo>): Promise<Todo | null> {
-    const existingTodo = await this.findOne(id);
+  /** 📌 Mettre à jour une tâche */
+  async update(id: number, todoData: Prisma.TodoUpdateInput) {
+    const existingTodo = await this.selectUnique(id);
     if (!existingTodo) {
       throw new NotFoundException(`Todo with ID ${id} not found`);
     }
 
     // If the todo is already completed, prevent modifications to endDate
     if (existingTodo.isDone && todoData.endDate !== undefined) {
-      throw new BadRequestException('Cannot modify endDate of a completed task');
+      throw new BadRequestException(
+        'Cannot modify endDate of a completed task',
+      );
     }
 
     // If isDone is being set to true, automatically set endDate to now
@@ -82,69 +74,253 @@ export class TodoService {
     }
 
     // Validate title if provided
-    if (todoData.title && todoData.title.trim().length < 3) {
+    if (
+      todoData.title &&
+      typeof todoData.title === 'string' &&
+      todoData.title.trim().length < 3
+    ) {
       throw new BadRequestException('Title must be at least 3 characters long');
     }
 
-    if (todoData.title) {
+    if (todoData.title && typeof todoData.title === 'string') {
       todoData.title = todoData.title.trim();
     }
 
-    await this.todoRepository.update(id, todoData);
-    const updatedTodo = await this.findOne(id);
-
-    // TODO: Publish appropriate event based on changes
-    // if (todoData.isDone === true && !existingTodo.isDone) {
-    //   await this.eventService.publish('TASK_COMPLETED', updatedTodo);
-    // } else {
-    //   await this.eventService.publish('TASK_UPDATED', updatedTodo);
-    // }
-
-    return updatedTodo;
+    return this.prisma.todo.update({
+      where: { id },
+      data: todoData,
+      include: {
+        person: true,
+      },
+    });
   }
 
-  async remove(id: number): Promise<void> {
-    const existingTodo = await this.findOne(id);
+  /** 📌 Récupérer une tâche par ID */
+  async selectUnique(id: number) {
+    const todo = await this.prisma.todo.findUnique({
+      where: { id },
+      include: {
+        person: true,
+      },
+    });
+
+    if (!todo) {
+      throw new NotFoundException(`Todo with ID ${id} not found`);
+    }
+
+    return todo;
+  }
+
+  /** 📌 Récupérer toutes les tâches */
+  async selectMany(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+
+    const [todos, totalCount] = await this.prisma.$transaction([
+      this.prisma.todo.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          person: true,
+        },
+      }),
+      this.prisma.todo.count(),
+    ]);
+
+    return {
+      meta: {
+        total: totalCount,
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+      data: todos,
+    };
+  }
+
+  /** 📌 Filtrer les tâches */
+  async filter(
+    page: number = 1,
+    limit: number = 10,
+    filters: any = {},
+    orderBy: string = 'createdAt',
+    orderDirection: 'asc' | 'desc' = 'desc',
+  ) {
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.TodoWhereInput = {
+      title: filters.title
+        ? { contains: filters.title.toLowerCase() }
+        : undefined,
+      description: filters.description
+        ? { contains: filters.description.toLowerCase() }
+        : undefined,
+      personId: filters.personId ? filters.personId : undefined,
+      isDone: filters.isDone !== undefined ? filters.isDone : undefined,
+      priority: filters.priority ? filters.priority : undefined,
+      startDate:
+        filters.startDateStart || filters.startDateEnd
+          ? {
+              gte: filters.startDateStart
+                ? new Date(filters.startDateStart)
+                : undefined,
+              lte: filters.startDateEnd
+                ? new Date(filters.startDateEnd)
+                : undefined,
+            }
+          : undefined,
+      endDate:
+        filters.endDateStart || filters.endDateEnd
+          ? {
+              gte: filters.endDateStart
+                ? new Date(filters.endDateStart)
+                : undefined,
+              lte: filters.endDateEnd
+                ? new Date(filters.endDateEnd)
+                : undefined,
+            }
+          : undefined,
+      createdAt:
+        filters.createdAtStart || filters.createdAtEnd
+          ? {
+              gte: filters.createdAtStart
+                ? new Date(filters.createdAtStart)
+                : undefined,
+              lte: filters.createdAtEnd
+                ? new Date(filters.createdAtEnd)
+                : undefined,
+            }
+          : undefined,
+      updatedAt:
+        filters.updatedAtStart || filters.updatedAtEnd
+          ? {
+              gte: filters.updatedAtStart
+                ? new Date(filters.updatedAtStart)
+                : undefined,
+              lte: filters.updatedAtEnd
+                ? new Date(filters.updatedAtEnd)
+                : undefined,
+            }
+          : undefined,
+      labels: filters.labels ? { hasSome: filters.labels } : undefined,
+    };
+
+    const [todos, totalCount] = await this.prisma.$transaction([
+      this.prisma.todo.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          [orderBy]: orderDirection,
+        },
+        include: {
+          person: true,
+        },
+      }),
+      this.prisma.todo.count({ where }),
+    ]);
+
+    return {
+      meta: {
+        total: totalCount,
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+      data: todos,
+    };
+  }
+
+  /** 📌 Supprimer une tâche */
+  async delete(id: number) {
+    const todo = await this.prisma.todo.findUnique({ where: { id } });
+
+    if (!todo) {
+      throw new NotFoundException(`Todo with ID ${id} not found`);
+    }
+
+    return this.prisma.todo.delete({ where: { id } });
+  }
+
+  /** 📌 Marquer une tâche comme terminée */
+  async markAsDone(id: number) {
+    const existingTodo = await this.selectUnique(id);
     if (!existingTodo) {
       throw new NotFoundException(`Todo with ID ${id} not found`);
     }
 
-    await this.todoRepository.delete(id);
-
-    // TODO: Publish TASK_DELETED event to Kafka
-    // await this.eventService.publish('TASK_DELETED', { id });
+    return this.prisma.todo.update({
+      where: { id },
+      data: {
+        isDone: true,
+        endDate: new Date(),
+      },
+      include: {
+        person: true,
+      },
+    });
   }
 
-  private applyFilters(queryBuilder: SelectQueryBuilder<Todo>, filters: any): void {
-    if (filters.priority !== undefined) {
-      queryBuilder.andWhere('todo.priority = :priority', { priority: filters.priority });
+  /** 📌 Marquer une tâche comme non terminée */
+  async markAsUndone(id: number) {
+    const existingTodo = await this.selectUnique(id);
+    if (!existingTodo) {
+      throw new NotFoundException(`Todo with ID ${id} not found`);
     }
 
-    if (filters.personId !== undefined) {
-      queryBuilder.andWhere('todo.personId = :personId', { personId: filters.personId });
-    }
-
-    if (filters.isDone !== undefined) {
-      queryBuilder.andWhere('todo.isDone = :isDone', { isDone: filters.isDone });
-    }
-
-    if (filters.startDate) {
-      queryBuilder.andWhere('todo.startDate >= :startDate', { startDate: filters.startDate });
-    }
-
-    if (filters.endDate) {
-      queryBuilder.andWhere('todo.endDate <= :endDate', { endDate: filters.endDate });
-    }
-
-    if (filters.labels && filters.labels.length > 0) {
-      // For JSON array contains check
-      queryBuilder.andWhere('todo.labels @> :labels', { labels: JSON.stringify(filters.labels) });
-    }
+    return this.prisma.todo.update({
+      where: { id },
+      data: {
+        isDone: false,
+        endDate: null,
+      },
+      include: {
+        person: true,
+      },
+    });
   }
 
-  // TODO: Implement person verification
-  // private async verifyPersonExists(personId: number): Promise<boolean> {
-  //   // Make REST call to person-service
-  //   // Return true if person exists, throw error if not
-  // }
+  /** 📌 Rechercher par personne */
+  async findByPerson(personId: number) {
+    return this.prisma.todo.findMany({
+      where: { personId },
+      include: {
+        person: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /** 📌 Rechercher par statut */
+  async findByStatus(isDone: boolean) {
+    return this.prisma.todo.findMany({
+      where: { isDone },
+      include: {
+        person: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /** 📌 Rechercher par priorité */
+  async findByPriority(priority: number) {
+    return this.prisma.todo.findMany({
+      where: { priority },
+      include: {
+        person: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /** 📌 Rechercher par labels */
+  async findByLabels(labels: string[]) {
+    return this.prisma.todo.findMany({
+      where: { labels: { hasSome: labels } },
+      include: {
+        person: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }

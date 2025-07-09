@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Person {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique @db.VarChar(100)
+  email       String    @unique @db.VarChar(255)
+  phoneNumber String?   @db.VarChar(20)
+  dateOfBirth DateTime? @db.Date
+  address     String?   @db.VarChar(255)
+  city        String?   @db.VarChar(100)
+  country     String?   @db.VarChar(100)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  todos       Todo[]
+
+  @@map("persons")
+}
+
+model Todo {
+  id          Int       @id @default(autoincrement())
+  title       String    @db.VarChar(255)
+  description String?
+  personId    Int
+  isDone      Boolean   @default(false)
+  priority    Int?
+  startDate   DateTime?
+  endDate     DateTime?
+  labels      String[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  person      Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+  @@index([isDone])
+  @@index([priority])
+  @@index([startDate])
+  @@index([endDate])
+  @@map("todos")
+}

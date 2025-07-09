@@ -16,27 +16,39 @@ export class TodoService {
   }
 
   findAll(queryDto: QueryTodoDto) {
-    console.log('API Gateway sending findAllTodos message to todo microservice with filters:', queryDto);
+    console.log(
+      'API Gateway sending findAllTodos message to todo microservice with filters:',
+      queryDto,
+    );
     const { page, pageSize, ...filters } = queryDto;
-    return this.todoClient.send('findAllTodos', { 
-      filters, 
-      page: page || 1, 
-      pageSize: pageSize || 10 
+    return this.todoClient.send('findAllTodos', {
+      filters,
+      page: page || 1,
+      pageSize: pageSize || 10,
     });
   }
 
   findOne(id: number) {
-    console.log('API Gateway sending findOneTodo message to todo microservice for id:', id);
+    console.log(
+      'API Gateway sending findOneTodo message to todo microservice for id:',
+      id,
+    );
     return this.todoClient.send('findOneTodo', { id });
   }
 
   update(id: number, updateTodoDto: UpdateTodoDto) {
-    console.log('API Gateway sending updateTodo message to todo microservice for id:', id);
+    console.log(
+      'API Gateway sending updateTodo message to todo microservice for id:',
+      id,
+    );
     return this.todoClient.send('updateTodo', { id, todoData: updateTodoDto });
   }
 
   remove(id: number) {
-    console.log('API Gateway sending removeTodo message to todo microservice for id:', id);
+    console.log(
+      'API Gateway sending removeTodo message to todo microservice for id:',
+      id,
+    );
     return this.todoClient.send('removeTodo', { id });
   }
 }

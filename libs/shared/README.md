@@ -27,13 +27,11 @@ PROJECT_SERVICE_PORT=4004
 
 ```typescript
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { userServiceDatabaseConfig } from '@app/shared';
+import { PrismaService } from '@app/shared';
 
 @Module({
-  imports: [
-    TypeOrmModule.forRoot(userServiceDatabaseConfig()),
-  ],
+  providers: [PrismaService],
+  exports: [PrismaService],
   // ...
 })
 export class UserModule {}
@@ -47,7 +45,7 @@ tasksync_db/
 ├── tasks/           # Entités du Task Service
 ├── projects/        # Entités du Project Service
 ├── notifications/   # Entités du Notification Service
-└── migrations/      # Migrations TypeORM
+└── migrations/      # Migrations Prisma
 ```
 
 ### Avantages de cette Approche
@@ -56,6 +54,8 @@ tasksync_db/
 ✅ **Transactions** : Possibilité de transactions cross-services
 ✅ **Requêtes complexes** : Jointures entre entités de différents services
 ✅ **Cohérence** : Pas de problèmes de synchronisation entre bases
+✅ **Type Safety** : Prisma offre une sécurité de type complète
+✅ **Auto-completion** : IntelliSense complet avec Prisma Client
 
 ### Inconvénients
 
@@ -69,8 +69,8 @@ tasksync_db/
 libs/shared/
 ├── src/
 │   ├── config/
-│   │   ├── database.config.ts    # Configuration TypeORM
 │   │   └── environment.config.ts # Variables d'environnement
+│   ├── prisma.service.ts         # Service Prisma partagé
 │   └── index.ts                  # Exports principaux
 └── README.md
 ``` 

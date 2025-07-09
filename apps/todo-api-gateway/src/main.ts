@@ -5,7 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(TodoApiGatewayModule);
-  
+
   // Enable CORS for frontend communication
   app.enableCors({
     origin: true,
@@ -16,11 +16,14 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   // Enable validation pipe
-  app.useGlobalPipes(new ValidationPipe({
-    transform: true,
-    whitelist: true,
-    forbidNonWhitelisted: true,
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: false, // Allow extra properties
+      skipMissingProperties: false,
+    }),
+  );
 
   // Swagger configuration
   const config = new DocumentBuilder()
@@ -44,7 +47,7 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  
+
   console.log(`🚀 Gateway is running on: http://localhost:${port}`);
   console.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
   console.log(`🔍 Health Check: http://localhost:${port}/api/v1/health`);

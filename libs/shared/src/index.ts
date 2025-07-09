@@ -1,6 +1,5 @@
-// Database Configuration
-export * from './config/database.config';
+// Environment Configuration
 export * from './config/environment.config';
 
-// Re-export common types and utilities
-export { TypeOrmModuleOptions } from '@nestjs/typeorm';
+// Prisma Service
+export * from './prisma.service';

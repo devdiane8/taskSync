@@ -11,7 +11,9 @@ describe('TodoApiGatewayController', () => {
       providers: [TodoApiGatewayService],
     }).compile();
 
-    todoApiGatewayController = app.get<TodoApiGatewayController>(TodoApiGatewayController);
+    todoApiGatewayController = app.get<TodoApiGatewayController>(
+      TodoApiGatewayController,
+    );
   });
 
   describe('root', () => {

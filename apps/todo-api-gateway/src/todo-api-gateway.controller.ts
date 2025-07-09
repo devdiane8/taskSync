@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Inject, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Inject,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
@@ -7,10 +18,9 @@ export class TodoApiGatewayController {
   constructor(
     @Inject('PERSON_SERVICE') private readonly personClient: ClientProxy,
     @Inject('TODO_SERVICE') private readonly todoClient: ClientProxy,
-    @Inject('NOTIFICATION_SERVICE') private readonly notificationClient: ClientProxy,
+    @Inject('NOTIFICATION_SERVICE')
+    private readonly notificationClient: ClientProxy,
   ) {}
-
- 
 
   // Health check
   @Get('health')
@@ -23,7 +33,7 @@ export class TodoApiGatewayController {
         person: 'checking...',
         todo: 'checking...',
         notification: 'checking...',
-      }
+      },
     };
   }
 }
