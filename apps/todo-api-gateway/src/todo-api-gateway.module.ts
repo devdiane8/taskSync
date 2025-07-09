@@ -2,9 +2,15 @@ import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { TodoApiGatewayController } from './todo-api-gateway.controller';
 import { TodoApiGatewayService } from './todo-api-gateway.service';
+import { TodoModule } from './todo/todo.module';
+import { PersonModule } from './person/person.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
+    TodoModule,
+    PersonModule,
+    NotificationModule,
     ClientsModule.register([
       {
         name: 'USER_SERVICE',
