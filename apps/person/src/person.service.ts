@@ -5,10 +5,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@app/shared';
 import { Prisma } from '../../../generated/prisma';
+import { KafkaProducer } from './kafka/kafka.producer';
 
 @Injectable()
 export class PersonService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly kafkaProducer: KafkaProducer,
+  ) {}
 
   /** 📌 Ajouter une personne */
   async create(personData: Prisma.PersonCreateInput) {
@@ -46,9 +50,20 @@ export class PersonService {
       address: personData.address?.trim(),
     };
 
-    return this.prisma.person.create({
+    // Create person in database
+    const createdPerson = await this.prisma.person.create({
       data: normalizedData,
     });
+
+    // Publish Kafka event
+    try {
+      await this.kafkaProducer.publishPersonCreated(createdPerson);
+    } catch (error) {
+      // Log error but don't fail the operation
+      console.error('Failed to publish person created event:', error);
+    }
+
+    return createdPerson;
   }
 
   /** 📌 Mettre à jour une personne */
