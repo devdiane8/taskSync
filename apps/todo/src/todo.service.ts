@@ -5,10 +5,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@app/shared';
 import { Prisma } from '../../../generated/prisma';
+import { KafkaProducer } from './kafka/kafka.producer';
 
 @Injectable()
 export class TodoService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly kafkaProducer: KafkaProducer,
+  ) {}
 
   /** 📌 Ajouter une tâche */
   async create(todoData: {
@@ -43,7 +47,7 @@ export class TodoService {
       throw new BadRequestException(`Person with ID ${personId} not found`);
     }
 
-    return this.prisma.todo.create({
+    const createdTodo = await this.prisma.todo.create({
       data: {
         ...rest,
         person: { connect: { id: personId } },
@@ -52,6 +56,16 @@ export class TodoService {
         person: true,
       },
     });
+
+    // Publish Kafka event
+    try {
+      await this.kafkaProducer.publishTodoCreated(createdTodo);
+    } catch (error) {
+      // Log error but don't fail the creation
+      console.error('Failed to publish todo created event:', error);
+    }
+
+    return createdTodo;
   }
 
   /** 📌 Mettre à jour une tâche */
@@ -86,13 +100,27 @@ export class TodoService {
       todoData.title = todoData.title.trim();
     }
 
-    return this.prisma.todo.update({
+    const updatedTodo = await this.prisma.todo.update({
       where: { id },
       data: todoData,
       include: {
         person: true,
       },
     });
+
+    // Publish Kafka event
+    try {
+      if (todoData.isDone === true && !existingTodo.isDone) {
+        await this.kafkaProducer.publishTodoCompleted(updatedTodo);
+      } else {
+        await this.kafkaProducer.publishTodoUpdated(updatedTodo);
+      }
+    } catch (error) {
+      // Log error but don't fail the update
+      console.error('Failed to publish todo update event:', error);
+    }
+
+    return updatedTodo;
   }
 
   /** 📌 Récupérer une tâche par ID */
@@ -233,13 +261,26 @@ export class TodoService {
 
   /** 📌 Supprimer une tâche */
   async delete(id: number) {
-    const todo = await this.prisma.todo.findUnique({ where: { id } });
+    const todo = await this.prisma.todo.findUnique({ 
+      where: { id },
+      include: { person: true }
+    });
 
     if (!todo) {
       throw new NotFoundException(`Todo with ID ${id} not found`);
     }
 
-    return this.prisma.todo.delete({ where: { id } });
+    await this.prisma.todo.delete({ where: { id } });
+
+    // Publish Kafka event
+    try {
+      await this.kafkaProducer.publishTodoDeleted(todo);
+    } catch (error) {
+      // Log error but don't fail the deletion
+      console.error('Failed to publish todo deleted event:', error);
+    }
+
+    return todo;
   }
 
   /** 📌 Marquer une tâche comme terminée */
@@ -249,7 +290,7 @@ export class TodoService {
       throw new NotFoundException(`Todo with ID ${id} not found`);
     }
 
-    return this.prisma.todo.update({
+    const updatedTodo = await this.prisma.todo.update({
       where: { id },
       data: {
         isDone: true,
@@ -259,6 +300,16 @@ export class TodoService {
         person: true,
       },
     });
+
+    // Publish Kafka event
+    try {
+      await this.kafkaProducer.publishTodoCompleted(updatedTodo);
+    } catch (error) {
+      // Log error but don't fail the operation
+      console.error('Failed to publish todo completed event:', error);
+    }
+
+    return updatedTodo;
   }
 
   /** 📌 Marquer une tâche comme non terminée */
@@ -268,7 +319,7 @@ export class TodoService {
       throw new NotFoundException(`Todo with ID ${id} not found`);
     }
 
-    return this.prisma.todo.update({
+    const updatedTodo = await this.prisma.todo.update({
       where: { id },
       data: {
         isDone: false,
@@ -278,6 +329,16 @@ export class TodoService {
         person: true,
       },
     });
+
+    // Publish Kafka event
+    try {
+      await this.kafkaProducer.publishTodoUpdated(updatedTodo);
+    } catch (error) {
+      // Log error but don't fail the operation
+      console.error('Failed to publish todo updated event:', error);
+    }
+
+    return updatedTodo;
   }
 
   /** 📌 Rechercher par personne */

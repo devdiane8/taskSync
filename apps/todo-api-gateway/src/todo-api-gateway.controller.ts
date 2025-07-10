@@ -18,8 +18,6 @@ export class TodoApiGatewayController {
   constructor(
     @Inject('PERSON_SERVICE') private readonly personClient: ClientProxy,
     @Inject('TODO_SERVICE') private readonly todoClient: ClientProxy,
-    @Inject('NOTIFICATION_SERVICE')
-    private readonly notificationClient: ClientProxy,
   ) {}
 
   // Health check
@@ -32,7 +30,6 @@ export class TodoApiGatewayController {
         gateway: 'running',
         person: 'checking...',
         todo: 'checking...',
-        notification: 'checking...',
       },
     };
   }

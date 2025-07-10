@@ -106,10 +106,16 @@ export class PersonService {
     console.log(
       'API Gateway sending filterPersons message to person microservice',
     );
+    
+    // Nettoyer l'objet filters pour enlever les propriétés undefined
+    const cleanFilters = Object.fromEntries(
+      Object.entries(filters).filter(([_, value]) => value !== undefined)
+    );
+    
     return this.personClient.send('filterPersons', {
       page,
       limit,
-      filters,
+      filters: cleanFilters,
       sortBy,
       sortOrder,
     });

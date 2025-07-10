@@ -32,7 +32,6 @@ async function bootstrap() {
     .setVersion('1.0')
     .addTag('person', 'Person management operations')
     .addTag('todo', 'Todo management operations')
-    .addTag('notification', 'Notification operations')
     .addTag('health', 'Health check operations')
     .addBearerAuth()
     .build();
